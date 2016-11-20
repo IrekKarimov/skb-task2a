@@ -36,25 +36,34 @@ function getVolumes(hdd){
 
 function getComponent(path, pc){
 	let pcComponent = {};
-	let pcitem;
 	const notFound = "Not Found";
+  console.log(path.length);
 
- if(path.length > 1){
+if( path[1] == "length" ){  return notFound; }
+
+if(path.length > 1){
+
   path.forEach( function(item, index){
 		pcComponent = notFound;
 		if(item){
-			if(typeof pc[item] !== "undefined"){
-				pcComponent = getComponent(path.splice(1), pc[item]);
-			}
+      pcComponent = pc[item];
+      if(typeof pc[item] !== "undefined"){
+        pcComponent = getComponent(path.splice(1), pc[item]);
+      }
 		}
+    if(pcComponent == notFound){
+      return notFound;
+    }
 	});
- }else{
-	pcComponent = pc[path];
- }
+
+}else{
+  pcComponent = pc[path];
+}
 
  if(typeof pcComponent == "undefined"){
 	pcComponent = notFound;
  }
+
 	return pcComponent;
 }
 
@@ -62,6 +71,9 @@ function getPatharray(url){
 	let pathArray = [];
 	url = url.replace(/\/{2,}/g,'/');
 	pathArray = url.split("/");
+  if(pathArray[pathArray.length-1] == ""){
+    pathArray.pop();
+  }
 	return pathArray.splice(1);
 }
 
@@ -78,7 +90,6 @@ app.get("/", (req, res) => {
 });
 
 app.get("/*", (req, res) => {
-	//console.log("====================");
 	let pcComponent = getComponent( getPatharray( req.url ), pc );
 	if( pcComponent == "Not Found"){
 		res.status(404);
