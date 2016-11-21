@@ -8,10 +8,10 @@ app.use(cors());
 const errColor = "Invalid color";
 
 // Удаление пробелов
-function clearQueryStr(str){
-  const RegEx=/\s+/g;
-  str = str.replace(RegEx,"");
- return str;
+function clearQueryStr(str){  
+  str = str.replace(/\s+/g,"");
+  str = str.replace(/\%20+/g,"");
+ return str.toLowerCase();
 }
 
 // Определяем формат
@@ -19,7 +19,7 @@ function parseColor(str){
   let color;
   let colorType;
 
-  str = clearQueryStr(str.toLowerCase());
+  str = clearQueryStr(str);
   if(str.length < 3){
     return errColor;
   }
@@ -84,37 +84,117 @@ function parseRgb(str){
 
 // Разбор HSL
 function parseHsl(str){
-  let color;
+  let color, r, g, b, q, h, l, s, p, hk, tr, tg, tb;
   str = str.substring(1);
   str = str.slice(0, -1);
   let colorArr = str.split(",");
-  color = hsl2Rgb(colorArr[0],colorArr[1],colorArr[2]);
-  return color;
+
+  if((colorArr.length < 3) || (colorArr.length > 3)){
+    return errColor;
+  }
+
+  h = colorArr[0];
+  s = colorArr[1];
+  l = colorArr[2];
+
+  if((h > 360) || (h < 0) || (isNaN(h))){
+    return errColor;
+  }
+  if(s.substr(s.length-1,1) == "%"){
+    s = s.substr(0,s.length-1)
+  }else{
+    return errColor;
+  }
+  if(l.substr(l.length-1,1) == "%"){
+    l = l.substr(0,l.length-1)
+  }else{
+    return errColor;
+  }
+
+  if((s > 100) || (s < 0) || (isNaN(s))){
+    return errColor;
+  }
+  if((s > 100) || (s < 0) || (isNaN(s))){
+    return errColor;
+  }
+
+  if(l < 0.5){ q = l * (1.0 + s);}
+  if(l > 0.5){ q = l + s - (l * s);}
+  p = 2.0 * l - q;
+  hk = h / 360;
+
+  tr = hk + 1/3;
+  if(tr < 0){ tr += 1.0}
+  if(tr > 0){ tr -= 1.0}
+
+  tg = hk;
+  if(tg < 0){ tg += 1.0}
+  if(tg > 0){ tg -= 1.0}
+
+  tb = hk - 1/3;
+  if(tb < 0){ tb += 1.0}
+  if(tb > 0){ tb -= 1.0}
+
+  if(tr < 1/6){ tr = p + ((q-p) * 6.0 * tr);}
+  if(tr >= 1/6 && tr < 1/2 ){ tr = q; }
+  if(tr >= 1/2 && tr < 2/3){
+    tr = p + ((q-p) * (2/3 - tr) * 6.0)
+  }else{
+    tr = p;
+  }
+
+  str = hsl2Rgb(h,s,l);
+  return parseRgb("("+str[0]+","+str[1]+","+str[2]+")");
 }
 
-function hsl2Rgb(h, s, l){
-    var r, g, b;
 
-    if(s == 0){
-        r = g = b = l; // achromatic
-    }else{
-        var hue2rgb = function hue2rgb(p, q, t){
-            if(t < 0) t += 1;
-            if(t > 1) t -= 1;
-            if(t < 1/6) return p + (q - p) * 6 * t;
-            if(t < 1/2) return q;
-            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-            return p;
-        }
 
-        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        var p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1/3);
-        g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1/3);
-    }
 
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+
+function hsl2Rgb(h, s, l) {
+  let r, g, b, m, c, x;
+  if (!isFinite(h)) h = 0;
+  if (!isFinite(s)) s = 0;
+  if (!isFinite(l)) l = 0;
+  h /= 60;
+  if (h < 0) h = 6 - (-h % 6);
+  h %= 6;
+  s = Math.max(0, Math.min(1, s / 100));
+  l = Math.max(0, Math.min(1, l / 100));
+  c = (1 - Math.abs((2 * l) - 1)) * s;
+  x = c * (1 - Math.abs((h % 2) - 1));
+  if (h < 1) {
+    r = c;
+    g = x;
+    b = 0;
+  } else if (h < 2) {
+    r = x;
+    g = c;
+    b = 0;
+  } else if (h < 3) {
+    r = 0;
+    g = c;
+    b = x;
+  } else if (h < 4) {
+    r = 0;
+    g = x;
+    b = c;
+  } else if (h < 5) {
+    r = x;
+    g = 0;
+    b = c;
+  } else {
+    r = c;
+    g = 0;
+    b = x;
+  }
+
+  m = l - c / 2;
+  r = Math.round((r + m) * 255);
+  g = Math.round((g + m) * 255);
+  b = Math.round((b + m) * 255);
+
+  return [r, g, b];
 }
 
 // Разбор HWB
